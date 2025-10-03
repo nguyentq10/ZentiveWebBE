@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36203.30
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repository", "Repository\Repository.csproj", "{AFC4243B-9B8E-4960-9E39-7ECDB7114745}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Services", "Services\Services.csproj", "{EB4D4832-872E-45DD-B8AC-7C0AC1BF1EB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZentiveAPI", "ZentiveAPI\ZentiveAPI.csproj", "{3FDC74A4-CD43-22B8-07DC-DB7E01BAF357}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AFC4243B-9B8E-4960-9E39-7ECDB7114745}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFC4243B-9B8E-4960-9E39-7ECDB7114745}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFC4243B-9B8E-4960-9E39-7ECDB7114745}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFC4243B-9B8E-4960-9E39-7ECDB7114745}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB4D4832-872E-45DD-B8AC-7C0AC1BF1EB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB4D4832-872E-45DD-B8AC-7C0AC1BF1EB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB4D4832-872E-45DD-B8AC-7C0AC1BF1EB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB4D4832-872E-45DD-B8AC-7C0AC1BF1EB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FDC74A4-CD43-22B8-07DC-DB7E01BAF357}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FDC74A4-CD43-22B8-07DC-DB7E01BAF357}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FDC74A4-CD43-22B8-07DC-DB7E01BAF357}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FDC74A4-CD43-22B8-07DC-DB7E01BAF357}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B02FE25B-8209-4702-AEFA-5FED1C6617CD}
+	EndGlobalSection
+EndGlobal
