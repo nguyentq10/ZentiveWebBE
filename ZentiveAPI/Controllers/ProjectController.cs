@@ -38,17 +38,17 @@ namespace Api.Controllers
             return project;
         }
 
-        //// POST: api/project
-        //[HttpPost]
-        //public async Task<ActionResult<Project>> CreateProject(Project project)
-        //{
-        //    project.Id = Guid.NewGuid();
-        //    project.CreatedAt = DateTime.UtcNow;
-        //    _context.Projects.Add(project);
-        //    await _context.SaveChangesAsync();
+        // POST: api/project
+        [HttpPost]
+        public async Task<ActionResult<Project>> CreateProject(Project project)
+        {
+            project.Id = Guid.NewGuid();
+            project.CreatedAt = DateTime.UtcNow;
+           var item = _serviceProvider.ProjectServices.CreateAsync(project);
+            await item;
 
-        //    return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
-        //}
+            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
+        }
 
         //// PUT: api/project/{id}
         //[HttpPut("{id}")]
