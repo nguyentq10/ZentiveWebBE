@@ -1,4 +1,5 @@
 ﻿using DAL.DBcontext;
+using Microsoft.EntityFrameworkCore;
 using Repository.Basic;
 using Repository.Models;
 using System;
@@ -13,5 +14,33 @@ namespace Repository.Repo
     {
         public ProjectRepository() { }
         public ProjectRepository(ZenthicDBContext context) => _context = context;
+
+        public async Task<List<Project>> GetAllAsync()
+        {
+            var items = await _context.Projects
+                .Include(p => p.Category)
+                .Include(p => p.Creator)
+                .Include(p => p.MediaAssets)
+                .Include(p => p.Pledges)
+                .Include(p => p.ProjectApprovals)
+                .Include(p => p.RewardTiers)
+                .ToListAsync();
+            return items ?? new List<Project>();
+        }
+        public async Task<Project> GetByIdAsync(Guid id)
+        {
+            var items = await _context.Projects
+                .Include(p => p.Category)
+                .Include(p => p.Creator)
+                .Include(p => p.MediaAssets)
+                .Include(p => p.Pledges)
+                .Include(p => p.ProjectApprovals)
+                .Include(p => p.RewardTiers)
+                .FirstOrDefaultAsync(m => m.Id == id);
+            return items ?? new Project();
+        }
+
+
+
     }
 }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Services.Services
-{   public interface IServiceProvides
+{   public interface IServiceProviders
     {
         AccountServices AccountServices { get; }
         IAccountServices IAccountServices { get; }
@@ -29,7 +29,7 @@ namespace Services.Services
         SiteDonationSerivces SiteDonationSerivces { get; }
         ISiteDonationServices ISiteDonationServices { get; }
     }
-    public class ServiceProvides : IServiceProvides
+    public class ServiceProviders : IServiceProviders
     {
         private AccountServices _accountServices;
         private CategoryServices _categoryServices;
@@ -63,7 +63,7 @@ namespace Services.Services
 
         ISiteDonationServices _ISiteDonationServices { get; }
 
-        public ServiceProvides() { }
+        public ServiceProviders() { }
 
         public AccountServices AccountServices
         {
