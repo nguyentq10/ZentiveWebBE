@@ -1,100 +1,96 @@
-﻿using DAL.DBcontext;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Repository.Models;
-using Services.Services;
+using Services.Interface; // Namespace chứa IProjectServices
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Api.Controllers
+namespace ZentiveAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ProjectController : ControllerBase
     {
-        private readonly IServiceProviders _serviceProvider;
-        public ProjectController(IServiceProviders serviceProvider)
+        private readonly IProjectServices _projectService;
+
+        // Inject trực tiếp IProjectServices thay vì IServiceProviders
+
+        public ProjectController(IProjectServices projectService)
         {
-            _serviceProvider = serviceProvider;
+            _projectService = projectService;
         }
 
-        // GET: api/project
+        // GET: api/Project
+        
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            return await _serviceProvider.ProjectServices.GetAllAsync();
+            var projects = await _projectService.GetAllAsync();
+            return Ok(projects);
         }
 
-        // GET: api/project/{id}
+        // GET: api/Project/{id}
+       
         [HttpGet("{id}")]
         public async Task<ActionResult<Project>> GetProject(Guid id)
         {
-            var project = await _serviceProvider.ProjectServices.GetIdAsync(id);
-              
+            var project = await _projectService.GetByIdAsync(id); // Sửa tên hàm GetIdAsync -> GetByIdAsync
 
             if (project == null)
             {
                 return NotFound();
             }
 
-            return project;
+            return Ok(project);
         }
 
-        // POST: api/project
+        // POST: api/Project
         [HttpPost]
-        public async Task<ActionResult<Project>> CreateProject(Project project)
+        public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
         {
-            project.Id = Guid.NewGuid();
-            project.CreatedAt = DateTime.UtcNow;
-           var item = _serviceProvider.ProjectServices.CreateAsync(project);
-            await item;
+            if (project == null)
+            {
+                return BadRequest();
+            }
 
+            // TODO: Bạn nên dùng một DTO riêng cho việc tạo mới thay vì dùng thẳng model Project
+            await _projectService.CreateAsync(project);
+
+            // Trả về 201 Created cùng với link để truy cập resource vừa tạo
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
         }
 
-        //// PUT: api/project/{id}
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateProject(Guid id, Project project)
-        //{
-        //    if (id != project.Id)
-        //    {
-        //        return BadRequest();
-        //    }
+        // PUT: api/Project/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateProject(Guid id, [FromBody] Project project)
+        {
+            if (id != project.Id)
+            {
+                return BadRequest("Project ID mismatch.");
+            }
 
-        //    project.UpdatedAt = DateTime.UtcNow;
-        //    _context.Entry(project).State = EntityState.Modified;
+            var result = await _projectService.UpdateAsync(project);
+            if (!result)
+            {
+                return NotFound();
+            }
 
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!_context.Projects.Any(p => p.Id == id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
+            return NoContent(); // Trả về 204 No Content khi cập nhật thành công
+        }
 
-        //    return NoContent();
-        //}
+        // DELETE: api/Project/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProject(Guid id)
+        {
+            var result = await _projectService.DeleteAsync(id);
+            if (!result)
+            {
+                return NotFound();
+            }
 
-        //// DELETE: api/project/{id}
-        //[HttpDelete("{id}")]
-        //public async Task<IActionResult> DeleteProject(Guid id)
-        //{
-        //    var project = await _context.Projects.FindAsync(id);
-        //    if (project == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    _context.Projects.Remove(project);
-        //    await _context.SaveChangesAsync();
-
-        //    return NoContent();
-        //}
+            return NoContent(); // Trả về 204 No Content khi xóa thành công
+        }
     }
 }

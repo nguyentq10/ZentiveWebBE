@@ -12,8 +12,9 @@ namespace Repository.Repo
 {
     public class ProjectRepository : GenericRepository<Project>
     {
-        public ProjectRepository() { }
-        public ProjectRepository(ZenthicDBContext context) => _context = context;
+        public ProjectRepository(ZenthicDBContext context) : base(context)
+        {
+        }
 
         public async Task<List<Project>> GetAllAsync()
         {

@@ -1,0 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Services.Response
+{
+    public class RegisterResponse
+    {
+        public string Token { get; set; }
+
+        public string Message { get; set; }
+
+        public UserProfileResponse? UserProfile { get; set; }
+    }
+}

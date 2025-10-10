@@ -11,8 +11,9 @@ namespace Repository.Repo
 {
     public class MediaAssetRepository : GenericRepository<MediaAsset>
     {
-        public MediaAssetRepository() { }
-        public MediaAssetRepository(ZenthicDBContext context) => _context = context;
+        public MediaAssetRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
-      
+
 }
