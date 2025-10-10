@@ -24,6 +24,6 @@ WORKDIR /app
 COPY --from=build /app/out .
 
 # Mở cổng 80 (HTTP)
-EXPOSE 80
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "ZentiveAPI.dll"]

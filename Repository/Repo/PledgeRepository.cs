@@ -11,7 +11,8 @@ namespace Repository.Repo
 {
     public class PledgeRepository : GenericRepository<Pledge>
     {
-        public PledgeRepository() { }
-        public PledgeRepository(ZenthicDBContext context) => _context = context;
+        public PledgeRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
 }

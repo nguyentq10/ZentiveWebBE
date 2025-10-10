@@ -11,7 +11,8 @@ namespace Repository.Repo
 {
     public class SiteDonationRepository : GenericRepository<SiteDonation>
     {
-        public SiteDonationRepository() { }
-        public SiteDonationRepository(ZenthicDBContext context) => _context = context;
+        public SiteDonationRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
 }

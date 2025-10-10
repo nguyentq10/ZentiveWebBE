@@ -11,7 +11,8 @@ namespace Repository.Repo
 {
     public class CategoryRepository : GenericRepository<Category>
     {
-        public CategoryRepository() { }
-        public CategoryRepository(ZenthicDBContext context) => _context = context;
+        public CategoryRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
 }

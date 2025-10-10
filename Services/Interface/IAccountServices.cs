@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore.Internal;
+using Services.Request;
+using Services.Response;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +11,8 @@ namespace Services.Interface
 {
     public interface IAccountServices
     {
-
+        
+        Task<string> RegisterAsync(RegisterRequest request);
+        Task<LoginResponse?> LoginAsync(LoginRequest request);
     }
 }

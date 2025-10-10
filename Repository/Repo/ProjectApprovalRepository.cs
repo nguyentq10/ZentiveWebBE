@@ -11,7 +11,8 @@ namespace Repository.Repo
 {
     public class ProjectApprovalRepository : GenericRepository<ProjectApproval>
     {
-        public ProjectApprovalRepository() { }
-        public ProjectApprovalRepository(ZenthicDBContext context) => _context = context;
+        public ProjectApprovalRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
 }

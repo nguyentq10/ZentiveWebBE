@@ -11,7 +11,8 @@ namespace Repository.Repo
 {
     public class PayoutAccountRepository : GenericRepository<PayoutAccount>
     {
-        public PayoutAccountRepository() { }
-        public PayoutAccountRepository(ZenthicDBContext context) => _context = context;
+        public PayoutAccountRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
 }

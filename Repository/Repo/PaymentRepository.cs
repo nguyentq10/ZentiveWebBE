@@ -11,7 +11,8 @@ namespace Repository.Repo
 {
     public class PaymentRepository : GenericRepository<Payment>
     {
-        public PaymentRepository() { }
-        public PaymentRepository(ZenthicDBContext context) => _context = context;
+        public PaymentRepository(ZenthicDBContext context) : base(context)
+        {
+        }
     }
 }
