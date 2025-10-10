@@ -23,7 +23,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// --- ĐĂNG KÝ CÁC SERVICE (DEPENDENCY INJECTION) ---
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -33,9 +32,12 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<ZenthicDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddAuthorization();
+
+// -- Service và Interface --
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAccountServices, AccountServices>();
 builder.Services.AddScoped<IProjectServices, ProjectServices>();
+builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
 builder.Services.AddEndpointsApiExplorer();
