@@ -28,7 +28,7 @@ namespace Services.Services
             var key = Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]);
 
             var claims = new[]
-            {
+            { 
                 new Claim(JwtRegisteredClaimNames.Sub, account.Id.ToString()), // User ID
                 new Claim(JwtRegisteredClaimNames.Email, account.Email),
                 new Claim(ClaimTypes.Role, account.Role) // Role

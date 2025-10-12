@@ -8,6 +8,7 @@ using Repository.Repo;
 using Repository.Repo.Repository.Repo;
 using Services.Interface;
 using Services.Services;
+using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Text;
 
@@ -36,9 +37,12 @@ builder.Services.AddAuthorization();
 // -- Service và Interface --
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAccountServices, AccountServices>();
-builder.Services.AddScoped<IProjectServices, ProjectServices>();
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IProjectServices, ProjectServices>();
+builder.Services.AddScoped<ICategoryServices, CategoryServices>();
+builder.Services.AddScoped<IRewardTierServices, RewardTierServices>();
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
@@ -57,7 +61,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])),
+            NameClaimType = JwtRegisteredClaimNames.Sub
         };
     });
 
