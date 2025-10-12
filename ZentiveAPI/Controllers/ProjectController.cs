@@ -2,95 +2,150 @@
 using Microsoft.AspNetCore.Mvc;
 using Repository.Models;
 using Services.Interface; // Namespace chứa IProjectServices
+using Services.Request;
+using Services.Response;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace ZentiveAPI.Controllers
 {
-    [Authorize]
+
     [ApiController]
     [Route("api/[controller]")]
     public class ProjectController : ControllerBase
     {
         private readonly IProjectServices _projectService;
-
-        // Inject trực tiếp IProjectServices thay vì IServiceProviders
-
         public ProjectController(IProjectServices projectService)
         {
             _projectService = projectService;
         }
-
-        // GET: api/Project
-        
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
+        [HttpGet] 
+        public async Task<ActionResult<PaginatedProjectResponse>> QueryProjects([FromQuery] QueryProjectsRequest request)
         {
-            var projects = await _projectService.GetAllAsync();
-            return Ok(projects);
+            var result = await _projectService.QueryProjectsAsync(request);
+            return Ok(result);
         }
-
-        // GET: api/Project/{id}
-       
         [HttpGet("{id}")]
-        public async Task<ActionResult<Project>> GetProject(Guid id)
+        public async Task<ActionResult<ProjectDetailResponseDto>> GetProject(Guid id) // <-- Thay đổi kiểu trả về
         {
-            var project = await _projectService.GetByIdAsync(id); // Sửa tên hàm GetIdAsync -> GetByIdAsync
+            var project = await _projectService.GetByIdAsync(id);
 
             if (project == null)
             {
                 return NotFound();
             }
 
-            return Ok(project);
-        }
+            // Chuyển đổi (map) từ model sang DTO trước khi trả về
+            var projectDto = new ProjectDetailResponseDto
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Slug = project.Slug,
+                Summary = project.Summary,
+                Goal = project.Goal,
+                EndAt = project.EndAt,
+                Status = project.Status,
+                CategoryId = project.CategoryId,
+                CreatorId = project.CreatorId,
+                CreatedAt = project.CreatedAt
+            };
 
-        // POST: api/Project
+            return Ok(projectDto);
+        }
         [HttpPost]
-        public async Task<ActionResult<Project>> CreateProject([FromBody] Project project)
+        [Authorize]
+        public async Task<ActionResult<ProjectDetailResponseDto>> CreateProject([FromBody] CreateProjectRequestDto request)
         {
-            if (project == null)
+
+
+            // Lấy ID của người dùng đang thực hiện request từ token
+            var creatorIdString = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            Console.WriteLine("Creator ID from token: " + creatorIdString); // Debug log
+            if (string.IsNullOrEmpty(creatorIdString))
             {
-                return BadRequest();
+                return Unauthorized();
             }
 
-            // TODO: Bạn nên dùng một DTO riêng cho việc tạo mới thay vì dùng thẳng model Project
-            await _projectService.CreateAsync(project);
+            var creatorId = new Guid(creatorIdString);
 
-            // Trả về 201 Created cùng với link để truy cập resource vừa tạo
-            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
+            // Gọi service để tạo dự án
+            var createdProject = await _projectService.CreateDraftProjectAsync(request, creatorId);
+
+            // Trả về 201 Created cùng với thông tin chi tiết và link đến resource vừa tạo
+            return CreatedAtAction(nameof(GetProject), new { id = createdProject.Id }, createdProject);
         }
-
-        // PUT: api/Project/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProject(Guid id, [FromBody] Project project)
+        [Authorize]
+        public async Task<IActionResult> UpdateProject(Guid id, [FromBody] UpdateProjectRequest request)
         {
-            if (id != project.Id)
+            // Lấy ID của người dùng đang thực hiện request từ token
+            var currentUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(currentUserIdString))
             {
-                return BadRequest("Project ID mismatch.");
+                return Unauthorized(); // Token không hợp lệ
             }
+            var currentUserId = new Guid(currentUserIdString);
 
-            var result = await _projectService.UpdateAsync(project);
-            if (!result)
+            try
             {
-                return NotFound();
-            }
+                var success = await _projectService.UpdateProjectAsync(id, request, currentUserId);
+                if (!success)
+                {
+                    return NotFound(); // Không tìm thấy project với ID này
+                }
 
-            return NoContent(); // Trả về 204 No Content khi cập nhật thành công
+                return NoContent(); // 204 No Content - Cập nhật thành công
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Bắt lỗi không có quyền từ service
+                return Forbid(ex.Message); // 403 Forbidden
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Bắt lỗi sai trạng thái từ service
+                return BadRequest(ex.Message); // 400 Bad Request
+            }
         }
-
-        // DELETE: api/Project/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProject(Guid id)
+        [HttpPost("{id}/submit")]
+        [Authorize] // Yêu cầu người dùng phải đăng nhập
+        public async Task<IActionResult> SubmitProject(Guid id)
         {
-            var result = await _projectService.DeleteAsync(id);
-            if (!result)
+            // Lấy ID của người dùng từ token
+            var creatorIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(creatorIdString))
             {
-                return NotFound();
+                return Unauthorized();
             }
+            var creatorId = new Guid(creatorIdString);
 
-            return NoContent(); // Trả về 204 No Content khi xóa thành công
+            try
+            {
+                // Gọi service để thực hiện logic
+                await _projectService.SubmitProjectForApprovalAsync(id, creatorId);
+
+                // Trả về 204 No Content khi thành công
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Bắt lỗi nếu không tìm thấy dự án
+                return NotFound(ex.Message); // 404 Not Found
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Bắt lỗi nếu người dùng không phải chủ sở hữu
+                return Forbid(ex.Message); // 403 Forbidden
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Bắt lỗi nếu trạng thái dự án không hợp lệ
+                return BadRequest(ex.Message); // 400 Bad Request
+            }
         }
     }
 }

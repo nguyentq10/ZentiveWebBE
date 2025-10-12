@@ -1,4 +1,5 @@
 ﻿using DAL.DBcontext;
+using Microsoft.EntityFrameworkCore;
 using Repository.Basic;
 using Repository.Models;
 using System;
@@ -13,6 +14,12 @@ namespace Repository.Repo
     {
         public CategoryRepository(ZenthicDBContext context) : base(context)
         {
+        }
+        public async Task<List<Category>> GetActiveCategoriesAsync()
+        {
+            return await _context.Categories
+                .Where(c => c.IsActive) // Lọc các category đang hoạt động
+                .ToListAsync();
         }
     }
 }
