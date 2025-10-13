@@ -57,7 +57,7 @@ namespace Services.Services
 
         public async Task<PaginatedProjectResponse> QueryProjectsAsync(QueryProjectsRequest request)
         {
-            // Gọi phương thức Repository với các tham số đã được chuẩn hóa
+            // Gọi phương thức Repository (không thay đổi)
             var (projects, totalCount) = await _unitOfWork.ProjectRepository.QueryProjectsAsync(
                 request.SearchQuery,
                 request.CategoryId,
@@ -67,23 +67,23 @@ namespace Services.Services
                 request.PageSize
             );
 
-            // Chuyển đổi từ Model `Project` sang `ProjectSummaryResponse` DTO
+           
             var projectSummaries = projects.Select(p => new ProjectSummaryResponse
             {
                 Id = p.Id,
                 Title = p.Title,
-                Subtitle = p.Summary,
-                CoverImageUrl = p.MediaCoverUrl,
-                CurrentPledgeAmount = p.CurrentAmount,
-                GoalAmount = p.Goal,
-                EndDate = p.EndAt,
-                CreatorName = p.Creator.FullName 
+                Summary = p.Summary,
+                MediaCoverUrl = p.MediaCoverUrl, 
+                CurrentAmount = p.CurrentAmount, 
+                Goal = p.Goal, 
+                EndAt = p.EndAt, 
+                CreatorName = p.Creator?.FullName ?? "N/A" 
             }).ToList();
 
-            // Tính toán thông tin phân trang
+           
             var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
 
-            // Tạo và trả về đối tượng response cuối cùng
+           
             return new PaginatedProjectResponse
             {
                 Projects = projectSummaries,
@@ -100,35 +100,35 @@ namespace Services.Services
                             .Replace(" ", "-");
            
 
-            // Bước 2: Chuyển đổi từ Request DTO sang Model (với tên thuộc tính đã cập nhật)
+           
             var project = new Project
             {
                 Id = Guid.NewGuid(),
                 Title = request.Title,
-                Slug = slug, // Gán slug vừa tạo
-                Summary = request.Summary, // Dùng tên mới
-                Goal = request.Goal, // Dùng tên mới
-                EndAt = request.EndAt, // Dùng tên mới
+                Slug = slug, 
+                Summary = request.Summary, 
+                Goal = request.Goal, 
+                EndAt = request.EndAt, 
                 CategoryId = request.CategoryId,
                 CreatorId = creatorId,
                 Status = "Draft",
                 CreatedAt = DateTime.UtcNow,
-                CurrentAmount = 0 // Tên trong model của bạn là CurrentAmount
+                CurrentAmount = 0 
             };
 
-            // Bước 3: Lưu vào DB
+           
             _unitOfWork.ProjectRepository.Create(project);
             await _unitOfWork.SaveChangesAsync();
 
-            // Bước 4: Chuyển đổi từ Model sang Response DTO để trả về (với tên thuộc tính đã cập nhật)
+            
             return new ProjectDetailResponseDto
             {
                 Id = project.Id,
                 Title = project.Title,
-                Slug = project.Slug, // Trả về slug
-                Summary = project.Summary, // Dùng tên mới
-                Goal = project.Goal, // Dùng tên mới
-                EndAt = project.EndAt, // Dùng tên mới
+                Slug = project.Slug, 
+                Summary = project.Summary,
+                Goal = project.Goal,
+                EndAt = project.EndAt, 
                 Status = project.Status,
                 CategoryId = project.CategoryId,
                 CreatorId = project.CreatorId,
@@ -137,36 +137,36 @@ namespace Services.Services
         }
         public async Task<bool> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid currentUserId)
         {
-            // Bước 1: Tìm dự án trong DB
+            
             var project = await _unitOfWork.ProjectRepository.GetByIdAsync(projectId);
             if (project == null)
             {
-                return false; // Không tìm thấy
+                return false; 
             }
 
-            // Bước 2: Kiểm tra quyền sở hữu
+           
             if (project.CreatorId != currentUserId)
             {
                 throw new UnauthorizedAccessException("Bạn không có quyền chỉnh sửa dự án này.");
             }
 
-            // Bước 3: Kiểm tra trạng thái (chỉ cho sửa khi là Draft hoặc Pending)
-            if (project.Status != "Draft" && project.Status != "Pending")
+            
+            if (project.Status != "Draft" && project.Status != "Submitted")
             {
-                throw new InvalidOperationException("Chỉ có thể chỉnh sửa dự án khi đang ở trạng thái Draft hoặc Pending.");
+                throw new InvalidOperationException("Chỉ có thể chỉnh sửa dự án khi đang ở trạng thái Draft hoặc Submmitted .");
             }
 
-            // Bước 4: Cập nhật thông tin từ DTO vào model
+           
             project.Title = request.Title;
             project.Summary = request.Summary;
-            project.Description = request.Description;       // <-- Cập nhật trường mới
-            project.MediaCoverUrl = request.MediaCoverUrl;   // <-- Cập nhật trường mới
+            project.Description = request.Description;     
+            project.MediaCoverUrl = request.MediaCoverUrl;  
             project.Goal = request.Goal;
             project.EndAt = request.EndAt;
             project.CategoryId = request.CategoryId;
             project.UpdatedAt = DateTime.UtcNow;
 
-            // TODO: Xử lý tạo lại slug nếu Title thay đổi
+
 
             // Bước 5: Chuẩn bị và lưu thay đổi
             _unitOfWork.ProjectRepository.Update(project);
@@ -252,5 +252,44 @@ namespace Services.Services
 
             return true;
         }
+        public async Task<bool> ApproveProjectAsync(Guid projectId, Guid adminId)
+        {
+            var project = await _unitOfWork.ProjectRepository.GetByIdAsync(projectId);
+            if (project == null)
+            {
+                throw new KeyNotFoundException("Không tìm thấy dự án.");
+            }
+            if (project.Status != "Submitted")
+            {
+                throw new InvalidOperationException("Chỉ có thể duyệt dự án khi đang ở trạng thái Submitted.");
+            }
+
+            // --- PHẦN CẬP NHẬT ---
+
+            // Bước 1: Tạo bản ghi ProjectApproval với đúng các thuộc tính
+            var approvalRecord = new ProjectApproval
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                AdminId = adminId,           // <-- Sửa đổi: Khớp với model
+                Decision = "Published",       // <-- Sửa đổi: Khớp với model
+                DecidedAt = DateTime.UtcNow, // <-- Sửa đổi: Khớp với model
+                Note = "Dự án đã được chấp thuận.",
+                CreatedAt = DateTime.UtcNow
+            };
+            _unitOfWork.ProjectApprovalRepository.Create(approvalRecord);
+
+            // Bước 2: Cập nhật trạng thái của dự án
+            project.Status = "Published";
+            project.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.ProjectRepository.Update(project);
+
+            // Bước 3: Lưu tất cả thay đổi vào DB
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
+
+
     }
 }

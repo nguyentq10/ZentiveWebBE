@@ -66,11 +66,11 @@ namespace Repository.Repo
                 query = query.Where(p => p.CategoryId == categoryId.Value);
             }
 
-            //// 3. Lọc theo từ khóa tìm kiếm (q)
-            //if (!string.IsNullOrWhiteSpace(searchQuery))
-            //{
-            //    query = query.Where(p => p.Title.Contains(searchQuery) || p.Subtitle.Contains(searchQuery));
-            //}
+           //// 3. Lọc theo từ khóa tìm kiếm (q)
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+           {
+               query = query.Where(p => p.Title.Contains(searchQuery) || p.Title.Contains(searchQuery));
+            }
 
             // Lấy tổng số lượng kết quả TRƯỚC khi phân trang
             var totalCount = await query.CountAsync();
