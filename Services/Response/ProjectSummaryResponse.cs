@@ -8,13 +8,14 @@ namespace Services.Response
 {
     public class ProjectSummaryResponse
     {
+
         public Guid Id { get; set; }
         public string Title { get; set; }
-        public string Subtitle { get; set; }
-        public string CoverImageUrl { get; set; }
-        public decimal CurrentPledgeAmount { get; set; }
-        public decimal GoalAmount { get; set; }
-        public DateTime? EndDate { get; set; }
+        public string Summary { get; set; } 
+        public string MediaCoverUrl { get; set; } 
+        public decimal CurrentAmount { get; set; }
+        public decimal Goal { get; set; } 
+        public DateTime? EndAt { get; set; } 
         public string CreatorName { get; set; }
     }
 }

@@ -20,5 +20,7 @@ namespace Services.Interface
         Task<bool> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid currentUserId);
         Task<RewardTierResponseDto> CreateTierForProjectAsync(Guid projectId, CreateRewardTierRequestDto request, Guid creatorId);
         Task<bool> SubmitProjectForApprovalAsync(Guid projectId, Guid creatorId);
+
+        Task<bool> ApproveProjectAsync(Guid projectId, Guid adminId);
     }
 }

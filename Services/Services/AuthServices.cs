@@ -37,7 +37,7 @@ namespace Services.Services
                 Phone = request.Phone,
                 Address = request.Address,
                 School = request.School,
-                Role = "Admin", // Nên dùng một lớp static để định nghĩa Role
+                Role = "Creator", 
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 AvatarUrl = null
