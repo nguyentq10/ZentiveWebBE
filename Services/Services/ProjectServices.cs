@@ -1,5 +1,6 @@
 ﻿using Repository.Models;
 using Repository.Repo;
+using Services.DTO;
 using Services.Interface;
 using Services.Request;
 using Services.Response;
@@ -113,7 +114,9 @@ namespace Services.Services
                 CreatorId = creatorId,
                 Status = "Draft",
                 CreatedAt = DateTime.UtcNow,
-                CurrentAmount = 0 
+                CurrentAmount = 0,
+                MediaCoverUrl = request.MediaCoverUrl,
+                Description = request.Description
             };
 
            
@@ -132,7 +135,9 @@ namespace Services.Services
                 Status = project.Status,
                 CategoryId = project.CategoryId,
                 CreatorId = project.CreatorId,
-                CreatedAt = project.CreatedAt
+                CreatedAt = project.CreatedAt,
+                MediaCoverUrl =project.MediaCoverUrl,
+                Description =project.Description
             };
         }
         public async Task<bool> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid currentUserId)
@@ -282,6 +287,7 @@ namespace Services.Services
             // Bước 2: Cập nhật trạng thái của dự án
             project.Status = "Published";
             project.UpdatedAt = DateTime.UtcNow;
+            project.StartAt = DateTime.UtcNow;
             _unitOfWork.ProjectRepository.Update(project);
 
             // Bước 3: Lưu tất cả thay đổi vào DB
@@ -289,7 +295,127 @@ namespace Services.Services
 
             return true;
         }
+        public async Task<PaginatedPendingProjectResponse> GetPendingProjectsAsync(AdminQueryPendingProjectsRequest request)
+        {
+            var (projects, totalCount) = await _unitOfWork.ProjectRepository.GetPendingProjectsAsync(request.Page, request.PageSize);
 
+            // Bước 2: Chuyển đổi từ Model sang DTO
+            var pendingProjectsDto = projects.Select(p => new PendingProjectResponseDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                CreatorName = p.Creator?.FullName ?? "N/A", 
+                SubmittedAt = p.UpdatedAt ?? p.CreatedAt 
+            }).ToList();
+
+           
+            var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+
+            return new PaginatedPendingProjectResponse
+            {
+                Projects = pendingProjectsDto,
+                CurrentPage = request.Page,
+                PageSize = request.PageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            };
+        }
+
+        public async Task<ProjectDetailResponse> GetPublishedProjectBySlugAsync(string slug)
+        {
+            // Bước 1: Gọi Repository để lấy dữ liệu thô
+            var project = await _unitOfWork.ProjectRepository.GetPublishedBySlugWithDetailsAsync(slug);
+
+            if (project == null)
+            {
+                return null; // Trả về null để controller xử lý thành 404 Not Found
+            }
+
+            // Bước 2: Thực hiện tính toán và chuyển đổi (map)
+            var projectDetailDto = new ProjectDetailResponse
+            {
+                Id = project.Id,
+                Title = project.Title,
+                Slug = project.Slug,
+                Summary = project.Summary,
+                Description = project.Description,
+                Goal = project.Goal,
+                CurrentAmount = project.CurrentAmount,
+                MediaCoverUrl = project.MediaCoverUrl,
+                EndAt = project.EndAt,
+                Status = project.Status,
+                CreatedAt = project.CreatedAt,
+
+                // Tính toán tiến độ
+                 ProgressPercentage = (double)(project.Goal > 0 ? Math.Round((project.CurrentAmount / project.Goal) * 100, 2) : 0),
+
+                // Đếm số người ủng hộ (chỉ đếm các pledge thành công nếu có)
+                BackerCount = project.Pledges.Count(),
+
+                // Xử lý an toàn nếu Creator bị null
+                CreatorName = project.Creator?.FullName ?? "N/A",
+
+                // Map danh sách các gói thưởng
+                Tiers = project.RewardTiers.Select(t => new RewardTierDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Amount = t.Amount,
+                    Quantity = t.Quantity
+                }).ToList(),
+
+                // Map danh sách media
+                Media = project.MediaAssets.Select(m => new MediaAssetDto
+                {
+                    Id = m.Id,
+                    Url = m.Url,
+                    Type = m.Type,
+                    SortOrder = m.SortOrder
+                }).OrderBy(m => m.SortOrder).ToList() // Sắp xếp media theo thứ tự
+            };
+
+            return projectDetailDto;
+        }
+
+        public async Task<bool> RejectProjectAsync(Guid projectId, Guid adminId, RejectProjectRequest request)
+        {
+            // Bước 1: Tìm dự án
+            var project = await _unitOfWork.ProjectRepository.GetByIdAsync(projectId);
+            if (project == null)
+            {
+                throw new KeyNotFoundException("Không tìm thấy dự án.");
+            }
+
+            // Bước 2: Kiểm tra trạng thái
+            if (project.Status != "Submitted")
+            {
+                throw new InvalidOperationException("Chỉ có thể từ chối dự án khi đang ở trạng thái Submitted.");
+            }
+
+            // Bước 3: Tạo bản ghi ProjectApproval để lưu lịch sử
+            var approvalRecord = new ProjectApproval
+            {
+                Id = Guid.NewGuid(),
+                ProjectId = projectId,
+                AdminId = adminId,
+                Decision = "Rejected", // Quyết định là "Rejected"
+                Note = request.Note, // Lý do từ chối từ request
+                DecidedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+            _unitOfWork.ProjectApprovalRepository.Create(approvalRecord);
+
+            // Bước 4: Cập nhật trạng thái của dự án
+            project.Status = "Rejected";
+            project.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.ProjectRepository.Update(project);
+
+            // Bước 5: Lưu tất cả thay đổi vào DB
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
+        }
 
     }
 }

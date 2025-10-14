@@ -28,7 +28,7 @@ namespace ZentiveAPI.Controllers
             var result = await _projectService.QueryProjectsAsync(request);
             return Ok(result);
         }
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<ActionResult<ProjectDetailResponseDto>> GetProject(Guid id) // <-- Thay đổi kiểu trả về
         {
             var project = await _projectService.GetByIdAsync(id);
@@ -38,7 +38,6 @@ namespace ZentiveAPI.Controllers
                 return NotFound();
             }
 
-            // Chuyển đổi (map) từ model sang DTO trước khi trả về
             var projectDto = new ProjectDetailResponseDto
             {
                 Id = project.Id,
@@ -147,5 +146,29 @@ namespace ZentiveAPI.Controllers
                 return BadRequest(ex.Message); // 400 Bad Request
             }
         }
+        [HttpGet("pending")]
+        [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền truy cập
+        public async Task<ActionResult<PaginatedPendingProjectResponse>> GetPendingProjects(
+            [FromQuery] AdminQueryPendingProjectsRequest request)
+        {
+            var result = await _projectService.GetPendingProjectsAsync(request);
+            return Ok(result);
+        }
+
+        [HttpGet("{slug}")]
+        [AllowAnonymous] 
+        public async Task<ActionResult<ProjectDetailResponseDto>> GetProjectBySlug(string slug)
+        {
+            var projectDetail = await _projectService.GetPublishedProjectBySlugAsync(slug);
+
+            if (projectDetail == null)
+            {
+                return NotFound(); // Trả về 404 nếu không tìm thấy dự án
+            }
+
+            return Ok(projectDetail);
+        }
+
+
     }
 }

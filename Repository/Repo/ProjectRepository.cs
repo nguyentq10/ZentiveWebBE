@@ -98,6 +98,35 @@ namespace Repository.Repo
             return (projects, totalCount);
         }
 
+        public async Task<(List<Project> projects, int totalCount)> GetPendingProjectsAsync(int page, int pageSize)
+        {
+            var query = _context.Projects
+                .Include(p => p.Creator) 
+                .Where(p => p.Status == "Submitted"); 
+
+           
+            var totalCount = await query.CountAsync();
+
+            
+            var projects = await query
+                .OrderByDescending(p => p.UpdatedAt) 
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (projects, totalCount);
+        }
+
+        public async Task<Project> GetPublishedBySlugWithDetailsAsync(string slug)
+        {
+            return await _context.Projects
+                .Include(p => p.Creator)         // Nạp thông tin người tạo
+                .Include(p => p.RewardTiers)     // Nạp danh sách các gói thưởng
+                .Include(p => p.MediaAssets)     // Nạp danh sách media
+                .Include(p => p.Pledges)         // Nạp danh sách ủng hộ để đếm backers
+                .FirstOrDefaultAsync(p => p.Slug == slug && p.Status == "Published"); // Chỉ lấy dự án đã publish
+        }
+
 
 
     }

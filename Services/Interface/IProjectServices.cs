@@ -22,5 +22,11 @@ namespace Services.Interface
         Task<bool> SubmitProjectForApprovalAsync(Guid projectId, Guid creatorId);
 
         Task<bool> ApproveProjectAsync(Guid projectId, Guid adminId);
+
+        Task<PaginatedPendingProjectResponse> GetPendingProjectsAsync(AdminQueryPendingProjectsRequest request);
+        Task<ProjectDetailResponse> GetPublishedProjectBySlugAsync(string slug);
+
+        Task<bool> RejectProjectAsync(Guid projectId, Guid adminId, RejectProjectRequest request);
+
     }
 }
