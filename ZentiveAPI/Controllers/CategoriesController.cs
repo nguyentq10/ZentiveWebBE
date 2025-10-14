@@ -16,12 +16,8 @@ namespace ZentiveAPI.Controllers
         {
             _categoryService = categoryService;
         }
-
-        /// <summary>
-        /// Lấy danh sách tất cả các category đang hoạt động.
-        /// </summary>
         [HttpGet]
-        [AllowAnonymous] // Cho phép truy cập công khai không cần token
+        [AllowAnonymous] 
         public async Task<ActionResult<IEnumerable<CategoryResponse>>> GetCategories()
         {
             var categories = await _categoryService.GetActiveCategoriesAsync();
