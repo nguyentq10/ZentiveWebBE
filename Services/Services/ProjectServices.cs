@@ -78,7 +78,8 @@ namespace Services.Services
                 CurrentAmount = p.CurrentAmount, 
                 Goal = p.Goal, 
                 EndAt = p.EndAt, 
-                CreatorName = p.Creator?.FullName ?? "N/A" 
+                CreatorName = p.Creator?.FullName ?? "N/A" ,
+                CategoryName = p.Category?.Name ?? "N/A"
             }).ToList();
 
            

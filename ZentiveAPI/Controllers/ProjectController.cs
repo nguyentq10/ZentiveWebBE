@@ -49,7 +49,9 @@ namespace ZentiveAPI.Controllers
                 Status = project.Status,
                 CategoryId = project.CategoryId,
                 CreatorId = project.CreatorId,
-                CreatedAt = project.CreatedAt
+                CreatedAt = project.CreatedAt,
+                MediaCoverUrl = project.MediaCoverUrl,
+                Description = project.Description,
             };
 
             return Ok(projectDto);

@@ -51,7 +51,8 @@ namespace Repository.Repo
         {
             // Bắt đầu với một IQueryable để xây dựng truy vấn động
             var query = _context.Projects
-                .Include(p => p.Creator) // Include Creator để lấy tên
+                .Include(p => p.Creator)// Include Creator để lấy tên
+                .Include(c => c.Category) // Include Category để lấy tên
                 .AsQueryable();
 
             // 1. Lọc theo Status
