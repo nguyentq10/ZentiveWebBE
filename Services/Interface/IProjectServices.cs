@@ -28,5 +28,8 @@ namespace Services.Interface
 
         Task<bool> RejectProjectAsync(Guid projectId, Guid adminId, RejectProjectRequest request);
 
+        Task<PaginatedMyProjectsDashboardResponse> GetMyProjectsAsync(Guid creatorId, MyProjectsQueryRequest request);
+
+
     }
 }

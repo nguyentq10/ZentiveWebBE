@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Repository.Models;
+using Repository.Repo;
 using Services.Interface; // Namespace chứa IProjectServices
 using Services.Request;
 using Services.Response;
+using Services.Services;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,9 +20,11 @@ namespace ZentiveAPI.Controllers
     public class ProjectController : ControllerBase
     {
         private readonly IProjectServices _projectService;
-        public ProjectController(IProjectServices projectService)
+        private readonly IPledgeServices _pledgeService;
+        public ProjectController(IProjectServices projectService, IPledgeServices pledgeService)
         {
-            _projectService = projectService;
+            _projectService = projectService; 
+            _pledgeService = pledgeService;
         }
         [HttpGet] 
         public async Task<ActionResult<PaginatedProjectResponse>> QueryProjects([FromQuery] QueryProjectsRequest request)
@@ -170,7 +174,33 @@ namespace ZentiveAPI.Controllers
 
             return Ok(projectDetail);
         }
+        [HttpGet("{projectId}/pledges")]
+        [Authorize(Roles = "Admin, Creator")] // Yêu cầu đăng nhập, logic chi tiết sẽ do service xử lý
+        public async Task<IActionResult> GetPledgesForProject(
+        [FromRoute] Guid projectId,
+        [FromQuery] PledgeQueryParameters queryParams)
+        {
+            try
+            {
+                // Lấy thông tin người dùng đang đăng nhập
+                var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                Guid.TryParse(userIdString, out var currentUserId);
+                var userRole = User.FindFirstValue(ClaimTypes.Role) ?? "";
 
+                // Gọi service để lấy dữ liệu
+                var result = await _pledgeService.GetPledgesForProjectAsync(projectId, queryParams, currentUserId, userRole);
 
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new ProblemDetails { Title = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Dùng 403 Forbidden khi người dùng không có quyền
+                return Forbid();
+            }
+        }
     }
 }

@@ -418,5 +418,52 @@ namespace Services.Services
             return true;
         }
 
+        public async Task<PaginatedMyProjectsDashboardResponse> GetMyProjectsAsync(Guid creatorId, MyProjectsQueryRequest request)
+        {
+            // Bước 1: Gọi Repository để lấy dữ liệu thô (bao gồm cả Category và Pledges)
+            var (projects, totalCount) = await _unitOfWork.ProjectRepository.GetProjectsByCreatorAsync(
+                creatorId,
+                request.Status,
+                request.Page,
+                request.PageSize
+            );
+
+            // Bước 2: Chuyển đổi sang DTO mới và tính toán các giá trị
+            var myProjectsDto = projects.Select(p => new MyProjectDashboardResponse
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Slug = p.Slug,
+                MediaCoverUrl = p.MediaCoverUrl,
+                Status = p.Status,
+                CurrentAmount = p.CurrentAmount,
+                Goal = p.Goal,
+                EndAt = p.EndAt,
+                CreatedAt = p.CreatedAt,
+
+                // Tính toán tiến độ
+                ProgressPercentage = (double)(p.Goal > 0 ? Math.Round((p.CurrentAmount / p.Goal) * 100, 2) : 0),
+
+                // Đếm số người ủng hộ
+                BackerCount = p.Pledges.Count(),
+
+                // Lấy tên Category một cách an toàn
+                CategoryName = p.Category?.Name ?? "N/A"
+            }).ToList();
+
+            // Bước 3: Tính toán thông tin phân trang
+            var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+
+            // Bước 4: Tạo và trả về response cuối cùng
+            return new PaginatedMyProjectsDashboardResponse
+            {
+                Projects = myProjectsDto,
+                CurrentPage = request.Page,
+                PageSize = request.PageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            };
+        }
+
     }
 }

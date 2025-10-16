@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Services.Request;
+using Services.Response;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +10,6 @@ namespace Services.Interface
 {
     public interface IPaymentServices
     {
+        Task<string> CreatePaymentIntentAsync(decimal amount, string currency, Dictionary<string, string> metadata, CancellationToken cancellationToken);
     }
 }
