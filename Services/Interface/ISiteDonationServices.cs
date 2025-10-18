@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Services.Request;
+using Services.Response;
+using Stripe;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +11,8 @@ namespace Services.Interface
 {
     public interface ISiteDonationServices
     {
+       
+        Task<CreateDonationResponseDto> PrepareDonationAsync(CreateDonationRequestDto request, Guid? userId, CancellationToken cancellationToken);
+        Task FulfillDonationAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
     }
 }

@@ -51,7 +51,8 @@ namespace Repository.Repo
         {
             // Bắt đầu với một IQueryable để xây dựng truy vấn động
             var query = _context.Projects
-                .Include(p => p.Creator) // Include Creator để lấy tên
+                .Include(p => p.Creator)// Include Creator để lấy tên
+                .Include(c => c.Category) // Include Category để lấy tên
                 .AsQueryable();
 
             // 1. Lọc theo Status
@@ -124,7 +125,35 @@ namespace Repository.Repo
                 .Include(p => p.RewardTiers)     // Nạp danh sách các gói thưởng
                 .Include(p => p.MediaAssets)     // Nạp danh sách media
                 .Include(p => p.Pledges)         // Nạp danh sách ủng hộ để đếm backers
-                .FirstOrDefaultAsync(p => p.Slug == slug && p.Status == "Published"); // Chỉ lấy dự án đã publish
+                .FirstOrDefaultAsync(p => p.Slug == slug); // Chỉ lấy dự án đã publish
+        }
+
+        public async Task<(List<Project> projects, int totalCount)> GetProjectsByCreatorAsync(
+    Guid creatorId,
+    string? status,
+    int page,
+    int pageSize)
+        {
+            var query = _context.Projects
+                .Where(p => p.CreatorId == creatorId)
+                .Include(p => p.Category) // <-- Nạp thông tin Category
+                .Include(p => p.Pledges)  // <-- Nạp thông tin Pledge để đếm
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(p => p.Status == status);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var projects = await query
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (projects, totalCount);
         }
 
 

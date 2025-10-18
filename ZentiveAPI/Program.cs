@@ -6,8 +6,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Repository.Repo;
 using Repository.Repo.Repository.Repo;
+using Services.Configuration;
 using Services.Interface;
 using Services.Services;
+using Stripe;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Text;
@@ -33,6 +35,7 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<ZenthicDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddAuthorization();
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
 
 // -- Service và Interface --
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -42,8 +45,9 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IProjectServices, ProjectServices>();
 builder.Services.AddScoped<ICategoryServices, CategoryServices>();
 builder.Services.AddScoped<IRewardTierServices, RewardTierServices>();
-
-
+builder.Services.AddScoped<IPaymentServices, PaymentServices>();
+builder.Services.AddScoped<IPledgeServices, PledgeService>();
+builder.Services.AddScoped<ISiteDonationServices,SiteDonationSerivces>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 builder.Services.AddDataProtection()
@@ -89,6 +93,10 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
+// -- Stripe --- 
+
+var stripeSettings = builder.Configuration.GetSection("StripeSettings").Get<StripeSettings>();
+StripeConfiguration.ApiKey = stripeSettings.SecretKey;
 
 var app = builder.Build();
 app.Urls.Add($"http://0.0.0.0:{port}");

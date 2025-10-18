@@ -1,0 +1,25 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Services.Response
+{
+    public class PledgeResponseDto
+    {
+        public Guid Id { get; set; }
+        public decimal Amount { get; set; }
+        public string Status { get; set; }
+        public string BackerName { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class PagedResult<T>
+    {
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalRecords { get; set; }
+        public IEnumerable<T> Items { get; set; }
+    }
+}

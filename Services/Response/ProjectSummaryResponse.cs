@@ -17,5 +17,7 @@ namespace Services.Response
         public decimal Goal { get; set; } 
         public DateTime? EndAt { get; set; } 
         public string CreatorName { get; set; }
+
+        public string CategoryName { get; set; }
     }
 }
