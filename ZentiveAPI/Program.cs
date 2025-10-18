@@ -48,6 +48,7 @@ builder.Services.AddScoped<IRewardTierServices, RewardTierServices>();
 builder.Services.AddScoped<IPaymentServices, PaymentServices>();
 builder.Services.AddScoped<IPledgeServices, PledgeService>();
 builder.Services.AddScoped<ISiteDonationServices,SiteDonationSerivces>();
+builder.Services.AddScoped<IMediaAssetServices, MediaAssetServices>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 builder.Services.AddDataProtection()

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Repository.Basic
@@ -43,11 +44,21 @@ namespace Repository.Basic
         {
             _context.Remove(entity);
         }
+        public async Task<int> CountAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _context.Set<T>().CountAsync(predicate);
+        }
 
+        // You might also want a version without a condition (counts all)
+        public async Task<int> CountAsync()
+        {
+            return await _context.Set<T>().CountAsync();
+        }
         // Các hàm Save sẽ được gọi bởi UnitOfWork
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
         }
+
     }
 }

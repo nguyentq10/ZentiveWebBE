@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Repository.Models;
 using Repository.Repo;
 using Services.Configuration;
+using Services.DTO;
 using Services.Interface;
 using Services.Request;
 using Services.Response;
@@ -98,6 +99,26 @@ namespace Services.Services
 
             await _unitOfWork.SaveChangesAsync();
             _logger.LogInformation("Successfully created SiteDonation {Id}", newDonation.Id);
+        }
+        public async Task<PaginatedListDto<AdminDonationDetailsDto>> GetAllDonationsAsync(Repository.Repo.PaginationQueryParameters queryParams)
+        {
+            var (donations, totalCount) = await _unitOfWork.SiteDonationRepository.GetAllDonationsAsync(queryParams);
+
+            // Map sang DTO bằng LINQ
+            var donationDtos = donations.Select(d => new AdminDonationDetailsDto
+            {
+                Id = d.Id,
+                Amount = d.Amount,
+                DonationDate = d.CreatedAt,
+                Message = d.Message,
+                Status = d.Status,
+                // Chỉ hiển thị thông tin donor nếu không ẩn danh và có thông tin
+                Donor = ( d.Donor != null)
+                    ? new DonorInfoDto { Id = d.Donor.Id, FullName = d.Donor.FullName, Email = d.Donor.Email }
+                    : null
+            }).ToList();
+
+            return new PaginatedListDto<AdminDonationDetailsDto>(donationDtos, queryParams.Page, queryParams.PageSize, totalCount);
         }
     }
 }

@@ -12,5 +12,6 @@ namespace Services.DTO
         public string Url { get; set; }
         public string Type { get; set; } // Ví dụ: "Image", "Video"
         public int SortOrder { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

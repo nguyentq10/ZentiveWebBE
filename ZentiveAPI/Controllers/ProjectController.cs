@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Repository.Models;
 using Repository.Repo;
+using Services.DTO;
 using Services.Interface; // Namespace chứa IProjectServices
 using Services.Request;
 using Services.Response;
@@ -21,10 +22,12 @@ namespace ZentiveAPI.Controllers
     {
         private readonly IProjectServices _projectService;
         private readonly IPledgeServices _pledgeService;
-        public ProjectController(IProjectServices projectService, IPledgeServices pledgeService)
+        private readonly IMediaAssetServices _mediaService;
+        public ProjectController(IProjectServices projectService, IPledgeServices pledgeService, IMediaAssetServices mediaAsset)
         {
             _projectService = projectService; 
             _pledgeService = pledgeService;
+            _mediaService = mediaAsset;
         }
         [HttpGet] 
         public async Task<ActionResult<PaginatedProjectResponse>> QueryProjects([FromQuery] QueryProjectsRequest request)
@@ -200,6 +203,59 @@ namespace ZentiveAPI.Controllers
             {
                 // Dùng 403 Forbidden khi người dùng không có quyền
                 return Forbid();
+            }
+        }
+        [HttpGet("{projectId}/media")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetProjectMedia([FromRoute] Guid projectId)
+        {
+            // try // Nếu muốn trả 404 khi project không tồn tại
+            // {
+            var mediaList = await _mediaService.GetMediaForProjectAsync(projectId);
+            return Ok(mediaList);
+            // }
+            // catch (KeyNotFoundException ex)
+            // {
+            //     return NotFound(new ProblemDetails { Title = ex.Message });
+            // }
+        }
+
+        [HttpPost("{projectId}/media")] // Route: POST /api/projects/{projectId}/media
+        [Authorize] // Yêu cầu đăng nhập, service sẽ kiểm tra quyền owner
+        [ProducesResponseType(typeof(MediaAssetDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AddProjectMedia(
+        [FromRoute] Guid projectId,
+        [FromBody] CreateMediaAssetRequestDto request)
+        {
+            // Lấy User ID từ claims
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out var currentUserId))
+            {
+                return Unauthorized(new ProblemDetails { Title = "Invalid user identifier." });
+            }
+
+            try
+            {
+                var createdMedia = await _mediaService.AddMediaToProjectAsync(projectId, request, currentUserId);
+
+                return StatusCode(StatusCodes.Status201Created, createdMedia);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new ProblemDetails { Title = "Not Found", Detail = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(); // 403 Forbidden khi không phải owner
+            }
+            catch (Exception ex) // Bắt các lỗi khác (ví dụ: lỗi database)
+            {
+                // Log lỗi ở đây
+                return StatusCode(500, new ProblemDetails { Title = "An error occurred while adding media.", Detail = ex.Message });
             }
         }
     }

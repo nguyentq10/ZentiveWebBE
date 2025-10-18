@@ -1,4 +1,5 @@
-﻿using Services.Request;
+﻿using Services.DTO;
+using Services.Request;
 using Services.Response;
 using Stripe;
 using System;
@@ -14,5 +15,7 @@ namespace Services.Interface
        
         Task<CreateDonationResponseDto> PrepareDonationAsync(CreateDonationRequestDto request, Guid? userId, CancellationToken cancellationToken);
         Task FulfillDonationAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
+
+        Task<PaginatedListDto<AdminDonationDetailsDto>> GetAllDonationsAsync(Repository.Repo.PaginationQueryParameters queryParams);
     }
 }

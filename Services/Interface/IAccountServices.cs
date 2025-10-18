@@ -11,7 +11,7 @@ namespace Services.Interface
 {
     public interface IAccountServices
     {
-        
-       
+        Task<int> GetTotalUserCountAsync();
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using DAL.DBcontext;
+using Microsoft.EntityFrameworkCore;
 using Repository.Basic;
 using Repository.Models;
 using System;
@@ -14,6 +15,14 @@ namespace Repository.Repo
         public MediaAssetRepository(ZenthicDBContext context) : base(context)
         {
         }
+        public async Task<List<MediaAsset>> GetMediaForProjectAsync(Guid projectId)
+        {
+        return await _context.MediaAssets
+            .Where(m => m.ProjectId == projectId) // Nhớ kiểm tra IsDeleted
+            .OrderBy(m => m.SortOrder) // Sắp xếp theo thứ tự
+            .ToListAsync();
+         }
+
     }
 
 }

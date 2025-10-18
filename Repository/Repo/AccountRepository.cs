@@ -39,5 +39,11 @@ namespace Repository.Repo
         {
             return await _context.Accounts.AnyAsync(u => u.Email == email);
         }
+        public async Task<int> CountActiveUsersAsync()
+        {
+            // Giả sử model của bạn có IsDeleted
+            return await _context.Accounts // Hoặc Users
+                .CountAsync(u => u.IsActive == false);
+        }
     }
 }
