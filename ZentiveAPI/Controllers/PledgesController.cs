@@ -6,7 +6,7 @@ using Services.Request;
 using Services.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-
+using Microsoft.Extensions.Logging; // <-- THÊM USING NÀY
 namespace ZentiveAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -14,33 +14,49 @@ namespace ZentiveAPI.Controllers
     public class PledgesController : ControllerBase
     {
         private readonly IPledgeServices _pledgeService;
-
-        public PledgesController(IPledgeServices pledgeService)
+        private readonly ILogger<PledgesController> _logger; // <-- THÊM DÒNG NÀY
+        public PledgesController(IPledgeServices pledgeService, ILogger<PledgesController> logger)
         {
             _pledgeService = pledgeService;
+            _logger = logger; // <-- THÊM DÒNG NÀY
         }
 
-        [HttpPost("/api/projects/{projectId}/pledges")] // <-- Route mới, ghi đè route của controller
+        [HttpPost("projects/{projectId}/pledges")]
         public async Task<IActionResult> CreatePledge(
-         [FromRoute] Guid projectId, // <-- Lấy projectId từ URL
-         [FromBody] PreparePledgeRequest request, // <-- Dùng DTO mới cho body
-         CancellationToken cancellationToken)
+            [FromRoute] Guid projectId,
+            [FromBody] PreparePledgeRequest request,
+            CancellationToken cancellationToken)
         {
             var backerIdString = User.FindFirstValue(ClaimTypes.NameIdentifier)
                              ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
             if (!Guid.TryParse(backerIdString, out var backerId))
             {
-                return Unauthorized(new ProblemDetails { Title = "Invalid user identifier." });
+                return Unauthorized(new ProblemDetails { Title = "Invalid user identifier in token." });
             }
 
             try
             {
+                // Bỏ HttpContext
                 var response = await _pledgeService.PreparePledgeAsync(projectId, request, backerId, cancellationToken);
                 return Ok(response);
             }
             catch (Exception ex)
             {
-                return BadRequest(new ProblemDetails { Title = "Pledge preparation failed", Detail = ex.Message });
+                // === SỬA LẠI KHỐI CATCH NÀY ===
+
+                // 1. Ghi log lỗi ra console (với dấu ### để dễ thấy)
+                _logger.LogError(ex, "### LỖI 500 KHI GỌI PREPARE PLEDGE ###");
+
+                // 2. Trả về chi tiết lỗi trong response (CHỈ DÙNG ĐỂ DEBUG)
+                return StatusCode(500, new
+                {
+                    title = "An unexpected error occurred. See details.",
+                    status = 500,
+                    detail = ex.Message, // <-- Chi tiết lỗi
+                    innerException = ex.InnerException?.Message, // Lỗi bên trong
+                    stackTrace = ex.StackTrace.ToString() // Dấu vết lỗi
+                });
             }
         }
     }

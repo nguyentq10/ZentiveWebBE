@@ -41,6 +41,12 @@ namespace Repository.Repo
 
             return (pledges, totalCount);
         }
+        public async Task<Pledge> FindByPaymentIdAsync(Guid paymentId)
+        {
+            // Tìm bản ghi Pledge đầu tiên có PaymentId khớp
+            return await _context.Pledges
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+        }
     }
     public class PledgeQueryParameters
     {

@@ -8,7 +8,6 @@ namespace Services.Response
 {
     public class PreparePledgeResponseDto
     {
-        public string ClientSecret { get; set; }
-        public string PublishableKey { get; set; }
+        public string PaymentUrl { get; set; }
     }
 }

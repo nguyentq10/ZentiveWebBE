@@ -17,5 +17,7 @@ namespace Services.Interface
         Task FulfillDonationAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
 
         Task<PaginatedListDto<AdminDonationDetailsDto>> GetAllDonationsAsync(Repository.Repo.PaginationQueryParameters queryParams);
+
+        Task<TotalDonationRevenueDto> GetTotalDonationRevenueAsync();
     }
 }

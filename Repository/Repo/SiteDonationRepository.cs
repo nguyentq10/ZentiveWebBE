@@ -36,6 +36,15 @@ namespace Repository.Repo
 
             return (donations, totalCount);
         }
+        public async Task<decimal> GetTotalCompletedDonationAmountAsync()
+        {
+            // Chỉ tính tổng các donation có trạng thái thanh toán là 'Completed' (hoặc 'Paid')
+            // và không bị xóa mềm (nếu có IsDeleted)
+            return await _context.SiteDonations
+                .Where(d => d.Status == "Paid") // Dùng hằng số
+                .SumAsync(d => d.Amount);
+        }
+
     }
     public class PaginationQueryParameters
     {
@@ -54,4 +63,5 @@ namespace Repository.Repo
         // public DateTime? FromDate { get; set; }
         // public DateTime? ToDate { get; set; }
     }
+
 }

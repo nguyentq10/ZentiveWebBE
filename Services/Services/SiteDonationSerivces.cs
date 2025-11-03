@@ -120,5 +120,14 @@ namespace Services.Services
 
             return new PaginatedListDto<AdminDonationDetailsDto>(donationDtos, queryParams.Page, queryParams.PageSize, totalCount);
         }
+        public async Task<TotalDonationRevenueDto> GetTotalDonationRevenueAsync()
+        {
+            var totalAmount = await _unitOfWork.SiteDonationRepository.GetTotalCompletedDonationAmountAsync();
+            return new TotalDonationRevenueDto
+            {
+                TotalAmount = totalAmount
+                // Currency mặc định là VND
+            };
+        }
     }
 }

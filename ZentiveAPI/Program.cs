@@ -13,7 +13,10 @@ using Stripe;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Text;
-
+using PayOS; // Namespace chứa class PayOS
+using Net.payOS.Types; // Namespace chứa các kiểu dữ liệu
+using PayOSSDK = Net.payOS.PayOS;
+; // <-- DÒNG BÍ DANH QUAN TRỌNG
 var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 
@@ -37,6 +40,13 @@ builder.Services.AddDbContext<ZenthicDBContext>(options =>
 builder.Services.AddAuthorization();
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
 
+
+// === ĐĂNG KÝ PAYOS ===
+var payOsClientId = builder.Configuration["PayOsSettings:ClientId"];
+var payOsApiKey = builder.Configuration["PayOsSettings:ApiKey"];
+var payOsChecksumKey = builder.Configuration["PayOsSettings:ChecksumKey"];
+PayOSSDK payOSInstance = new PayOSSDK(payOsClientId, payOsApiKey, payOsChecksumKey);
+builder.Services.AddSingleton(payOSInstance);
 // -- Service và Interface --
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAccountServices, AccountServices>();
@@ -49,6 +59,7 @@ builder.Services.AddScoped<IPaymentServices, PaymentServices>();
 builder.Services.AddScoped<IPledgeServices, PledgeService>();
 builder.Services.AddScoped<ISiteDonationServices,SiteDonationSerivces>();
 builder.Services.AddScoped<IMediaAssetServices, MediaAssetServices>();
+builder.Services.AddScoped<IPayOsService, PayOsService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 builder.Services.AddDataProtection()

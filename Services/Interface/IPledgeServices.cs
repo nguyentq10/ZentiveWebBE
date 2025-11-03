@@ -12,13 +12,14 @@ namespace Services.Interface
 {
     public interface IPledgeServices
     {
+        // Task<PreparePledgeResponseDto> PreparePledgeAsync(Guid projectId, PreparePledgeRequest request, Guid backerId, CancellationToken cancellationToken);
+        //  Task FulfillPledgeAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
+
+        // Task HandleFailedPledgeAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
+
+        // Task<PaginatedListDto<PledgeDetailsDto>> GetPledgesForProjectAsync(Guid projectId, PledgeQueryParameters queryParams, Guid currentUserId, string currentUserRole);
         Task<PreparePledgeResponseDto> PreparePledgeAsync(Guid projectId, PreparePledgeRequest request, Guid backerId, CancellationToken cancellationToken);
-        Task FulfillPledgeAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
-
-        Task HandleFailedPledgeAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken);
-
         Task<PaginatedListDto<PledgeDetailsDto>> GetPledgesForProjectAsync(Guid projectId, PledgeQueryParameters queryParams, Guid currentUserId, string currentUserRole);
-
     }
 }
 

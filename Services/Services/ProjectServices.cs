@@ -4,6 +4,7 @@ using Services.DTO;
 using Services.Interface;
 using Services.Request;
 using Services.Response;
+using Services.Setup;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -98,11 +99,7 @@ namespace Services.Services
         public async Task<ProjectDetailResponseDto> CreateDraftProjectAsync(CreateProjectRequestDto request, Guid creatorId)
         {
             
-            var slug = Regex.Replace(request.Title.ToLower(), @"[^a-z0-9\s-]", "")
-                            .Replace(" ", "-");
-           
-
-           
+            var slug = SlugGenerator.GenerateSlug(request.Title);
             var project = new Project
             {
                 Id = Guid.NewGuid(),

@@ -30,5 +30,12 @@ namespace ZentiveAPI.Controllers.Admin
             var result = await _donationService.GetAllDonationsAsync(queryParams);
             return Ok(result);
         }
+        [HttpGet("donations/revenue")] // Route: GET /admin/donations/revenue
+        [ProducesResponseType(typeof(TotalDonationRevenueDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetTotalDonationRevenue()
+        {
+            var result = await _donationService.GetTotalDonationRevenueAsync();
+            return Ok(result);
+        }
     }
 }

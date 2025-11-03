@@ -1,9 +1,12 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Net.payOS.Types;
 using Repository.Models;
 using Repository.Repo;
 using Services.Configuration;
+using Services.Core;
 using Services.Interface;
 using Services.Request;
 using Services.Response;
@@ -13,111 +16,66 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 namespace Services.Services
 {
     public class PledgeService : IPledgeServices
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IPaymentServices _paymentService;
-        private readonly StripeSettings _stripeSettings;
+        private readonly IPayOsService _payOsService; // <-- THAY ĐỔI Ở ĐÂY
         private readonly ILogger<PledgeService> _logger;
+        private readonly IConfiguration _config;
+
         public PledgeService(
             IUnitOfWork unitOfWork,
-            IPaymentServices paymentService,
-            IOptions<StripeSettings> stripeSettings,
-            ILogger<PledgeService> logger
-           )
+            IPayOsService payOsService, // <-- THAY ĐỔI Ở ĐÂY
+            ILogger<PledgeService> logger,
+            IConfiguration config)
         {
             _unitOfWork = unitOfWork;
-            _paymentService = paymentService;
-            _stripeSettings = stripeSettings.Value;
+            _payOsService = payOsService;
             _logger = logger;
-           
+            _config = config;
         }
+
+        // Cập nhật: Không cần HttpContext
         public async Task<PreparePledgeResponseDto> PreparePledgeAsync(Guid projectId, PreparePledgeRequest request, Guid backerId, CancellationToken cancellationToken)
         {
             var project = await _unitOfWork.ProjectRepository.GetByIdAsync(projectId);
-            if (project == null || project.Status != "Published" || DateTime.UtcNow > project.EndAt)
+            if (project == null || project.Status != StatusConstants.ProjectPublished || DateTime.UtcNow > project.EndAt)
             {
                 throw new InvalidOperationException("Project is not available for pledging.");
             }
 
-            // THAY ĐỔI LỚN NHẤT TẠI ĐÂY
-            decimal pledgeAmount; // Biến để lưu số tiền cuối cùng
-
+            decimal pledgeAmount;
             if (request.RewardTierId.HasValue)
             {
-                // Trường hợp 1: Người dùng chọn một gói phần thưởng
                 var tier = await _unitOfWork.RewardTierRepository.GetByIdAsync(request.RewardTierId.Value);
-                if (tier == null || tier.ProjectId != projectId)
-                {
-                    throw new ArgumentException("Invalid reward tier for this project.");
-                }
-                // Tự động gán số tiền của gói, bỏ qua Amount từ request
+                if (tier == null || tier.ProjectId != projectId) { throw new ArgumentException("Invalid reward tier."); }
                 pledgeAmount = tier.Amount;
             }
             else
             {
-                // Trường hợp 2: Người dùng ủng hộ tự do (không chọn gói)
-                // Lúc này, Amount trong request là bắt buộc.
-                if (!request.Amount.HasValue)
-                {
-                    throw new ArgumentException("Amount is required when no reward tier is selected.");
-                }
+                if (!request.Amount.HasValue) { throw new ArgumentException("Amount is required."); }
                 pledgeAmount = request.Amount.Value;
             }
 
-            var metadata = new Dictionary<string, string>
-        {
-            { "projectId", projectId.ToString() },
-            { "backerId", backerId.ToString() },
-            { "rewardTierId", request.RewardTierId?.ToString() ?? string.Empty }
-        };
+            // 1. TẠO MÃ GIAO DỊCH (PayOS dùng long, Ticks quá dài)
+            var txnRef = DateTime.Now.Ticks.ToString();
+            // Lấy 10 số cuối làm orderCode (kiểu long)
+            long orderCodeLong = DateTimeOffset.Now.ToUnixTimeSeconds();
+            string orderCodeString = orderCodeLong.ToString();
 
-            // Dùng `pledgeAmount` đã được xác định để tạo thanh toán
-            var clientSecret = await _paymentService.CreatePaymentIntentAsync(pledgeAmount, "vnd", metadata, cancellationToken);
-
-            return new PreparePledgeResponseDto
-            {
-                ClientSecret = clientSecret,
-                PublishableKey = _stripeSettings.PublishableKey
-            };
-        }
-
-
-        public async Task FulfillPledgeAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Fulfilling pledge for PaymentIntent: {PaymentIntentId}", paymentIntent.Id);
-
-            var existingPayment = await _unitOfWork.PaymentRepository.FindByExternalIdAsync(paymentIntent.Id);
-            if (existingPayment != null)
-            {
-                _logger.LogWarning("PaymentIntent {PaymentIntentId} has already been processed.", paymentIntent.Id);
-                return;
-            }
-
-            var metadata = paymentIntent.Metadata;
-            Guid.TryParse(metadata["projectId"], out var projectId);
-            Guid.TryParse(metadata["backerId"], out var backerId);
-            Guid.TryParse(metadata["rewardTierId"], out var rewardTierId);
-
-            if (projectId == Guid.Empty || backerId == Guid.Empty)
-            {
-                _logger.LogError("PaymentIntent {PaymentIntentId} metadata is missing required information.", paymentIntent.Id);
-                throw new InvalidOperationException("PaymentIntent metadata is missing.");
-            }
-
+            // 2. TẠO CÁC BẢN GHI "PENDING"
             var newPayment = new Payment
             {
                 Id = Guid.NewGuid(),
-                Provider = "Stripe",
-                Currency = paymentIntent.Currency.ToUpper(),
-                Amount = paymentIntent.Amount / (paymentIntent.Currency.ToLower() == "vnd" ? 1 : 100),
-                ExternalId = paymentIntent.Id,
-                Status = "Paid",
-                PaidAt = DateTime.UtcNow,
+                Provider = "PayOS",
+                Amount = pledgeAmount,
+                ExternalId = orderCodeString, // Lưu orderCode
+                Status = StatusConstants.PaymentPending,
                 CreatedAt = DateTime.UtcNow,
-                RawJson = paymentIntent.ToJson()
+                Currency = "VND"
             };
             _unitOfWork.PaymentRepository.Create(newPayment);
 
@@ -126,103 +84,66 @@ namespace Services.Services
                 Id = Guid.NewGuid(),
                 ProjectId = projectId,
                 BackerId = backerId,
-                RewardTierId = rewardTierId == Guid.Empty ? null : rewardTierId,
-                Amount = newPayment.Amount,
+                RewardTierId = request.RewardTierId,
+                Amount = pledgeAmount,
                 PaymentId = newPayment.Id,
-                Status = "Paid",
-                CreatedAt = DateTime.UtcNow,
+                Status = StatusConstants.PaymentPending,
+                CreatedAt = DateTime.UtcNow
             };
             _unitOfWork.PledgeRepository.Create(newPledge);
 
-            var project = await _unitOfWork.ProjectRepository.GetByIdAsync(projectId);
-            if (project != null)
-            {
-                project.CurrentAmount += newPledge.Amount;
-                _unitOfWork.ProjectRepository.Update(project);
-            }
-
             await _unitOfWork.SaveChangesAsync();
-            _logger.LogInformation("Successfully created Pledge {PledgeId} for Project {ProjectId}", newPledge.Id, projectId);
-        }
 
-        public async Task HandleFailedPledgeAsync(PaymentIntent paymentIntent, CancellationToken cancellationToken)
-        {
-            _logger.LogWarning("Handling failed pledge for PaymentIntent: {PaymentIntentId}", paymentIntent.Id);
+            // 3. TẠO URL THANH TOÁN PAYOS
+            var returnUrl = _config["PayOsSettings:ReturnUrl"];
+            var cancelUrl = _config["PayOsSettings:CancelUrl"];
 
-            // 1. KIỂM TRA XEM ĐÃ GHI LẠI LỖI NÀY CHƯA (IDEMPOTENCY)
-            var existingPayment = await _unitOfWork.PaymentRepository.FindByExternalIdAsync(paymentIntent.Id);
-            if (existingPayment != null)
+            // === SỬA LỖI Ở ĐÂY ===
+            // Dùng chính orderCodeString (10 ký tự) làm mô tả.
+            // Đây là cách an toàn nhất để đảm bảo mô tả < 25 ký tự.
+            var orderInfo = orderCodeString;
+
+            // Gọi service với các kiểu dữ liệu đúng (cho payOS.Net5)
+            CreatePaymentResult paymentResult = await _payOsService.CreatePaymentUrlAsync(
+                orderCode: orderCodeLong, // `IPayOsService` nhận string
+                description: orderInfo,       // <-- Mô tả đã rút ngắn
+                amount: (int)pledgeAmount,  // PayOS yêu cầu int
+                returnUrl: returnUrl,
+                cancelUrl: cancelUrl
+            );
+
+            newPayment.RawJson = paymentResult.checkoutUrl;
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Created PayOS URL for OrderCode {OrderCode}", orderCodeString);
+
+            return new PreparePledgeResponseDto
             {
-                _logger.LogWarning("Failed PaymentIntent {PaymentIntentId} has already been recorded.", paymentIntent.Id);
-                return; // Đã ghi lại rồi, không làm gì nữa.
-            }
-
-            // 2. ĐỌC METADATA ĐỂ BIẾT CONTEXT
-            var metadata = paymentIntent.Metadata;
-            Guid.TryParse(metadata["backerId"], out var backerId); // Có thể cần backerId để biết ai đã thất bại
-
-            // 3. CHỈ TẠO BẢN GHI PAYMENT, KHÔNG TẠO PLEDGE
-            // Một thanh toán thất bại không phải là một lượt ủng hộ (pledge).
-            var failedPayment = new Payment
-            {
-                Id = Guid.NewGuid(),
-                Provider = "Stripe",
-                Currency = paymentIntent.Currency.ToUpper(),
-                Amount = paymentIntent.Amount / (paymentIntent.Currency.ToLower() == "vnd" ? 1 : 100),
-                ExternalId = paymentIntent.Id,
-                Status = "Failed", // <-- SỬ DỤNG TRẠNG THÁI "Failed" (hoặc trạng thái tương ứng trong DB của bạn)
-                PaidAt = null, // Không có ngày thanh toán thành công
-                CreatedAt = DateTime.UtcNow,
-                // Lưu lại thông tin lỗi từ Stripe
-                RawJson = paymentIntent.LastPaymentError?.Message ?? paymentIntent.ToJson()
+                PaymentUrl = paymentResult.checkoutUrl
             };
-
-            _unitOfWork.PaymentRepository.Create(failedPayment);
-
-            // 4. LƯU THAY ĐỔI VÀO DATABASE
-            await _unitOfWork.SaveChangesAsync();
-            _logger.LogInformation("Successfully recorded failed payment {PaymentId}", failedPayment.Id);
         }
+        // Hàm này vẫn giữ lại cho API GET
         public async Task<PaginatedListDto<PledgeDetailsDto>> GetPledgesForProjectAsync(Guid projectId, PledgeQueryParameters queryParams, Guid currentUserId, string currentUserRole)
         {
-            // === BƯỚC 1: KIỂM TRA PHÂN QUYỀN (giữ nguyên) ===
-            var project = await _unitOfWork.ProjectRepository.GetByIdAsync(projectId);
-            if (project == null)
-            {
-                throw new KeyNotFoundException("Project not found.");
-            }
-
-            if (currentUserRole != "Admin" && project.CreatorId != currentUserId)
-            {
-                throw new UnauthorizedAccessException("You are not authorized to view pledges for this project.");
-            }
-
-            // === BƯỚC 2: GỌI REPOSITORY ĐỂ LẤY DỮ LIỆU (giữ nguyên) ===
+            // ... (Code map thủ công dùng LINQ .Select() đã viết trước đó) ...
             var (pledgesFromDb, totalCount) = await _unitOfWork.PledgeRepository.GetPledgesForProjectAsync(projectId, queryParams);
 
-            // === BƯỚC 3: MAP THỦ CÔNG TỪ ENTITY SANG DTO ===
-            var pledgeDtos = new List<PledgeDetailsDto>();
-            foreach (var pledge in pledgesFromDb)
+            var pledgeDtos = pledgesFromDb.Select(pledge => new PledgeDetailsDto
             {
-                pledgeDtos.Add(new PledgeDetailsDto
+                Id = pledge.Id,
+                Amount = pledge.Amount,
+                Status = pledge.Status,
+                CreatedAt = pledge.CreatedAt,
+                Backer = pledge.Backer != null ? new BackerDto
                 {
-                    Id = pledge.Id,
-                    Amount = pledge.Amount,
-                    Status = pledge.Status,
-                    CreatedAt = pledge.CreatedAt,
-                    Backer = pledge.Backer != null ? new BackerDto // Kiểm tra backer null cho an toàn
-                    {
-                        Id = pledge.Backer.Id,
-                        FullName = pledge.Backer.FullName,
-                        Email = pledge.Backer.Email
-                    } : null
-                });
-            }
+                    Id = pledge.Backer.Id,
+                    FullName = pledge.Backer.FullName,
+                    Email = pledge.Backer.Email
+                } : null
+            }).ToList();
 
-            // === BƯỚC 4: TẠO VÀ TRẢ VỀ KẾT QUẢ PHÂN TRANG (giữ nguyên) ===
             return new PaginatedListDto<PledgeDetailsDto>(pledgeDtos, queryParams.Page, queryParams.PageSize, totalCount);
         }
-
     }
 
 }
